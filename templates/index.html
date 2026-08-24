@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rating Fortune — IMDb Review Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --ink: #0c0e12;
+        --panel: #15181e;
+        --panel-line: #262b34;
+        --paper: #ece7db;
+        --paper-dim: #b9b3a3;
+        --gold: #d9a441;
+        --gold-dim: #8a6a2c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(ellipse at top, #1a1e26 0%, var(--ink) 55%);
+        color: var(--paper);
+        font-family: 'Source Serif 4', Georgia, serif;
+        display: flex;
+        justify-content: center;
+        padding: 56px 20px 80px;
+    }
+
+    .stage { width: 100%; max-width: 640px; }
+
+    .eyebrow {
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.35em;
+        font-size: 12px;
+        color: var(--gold);
+        text-align: center;
+        margin: 0 0 8px;
+    }
+
+    h1 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(40px, 8vw, 60px);
+        letter-spacing: 0.03em;
+        text-align: center;
+        margin: 0;
+        color: var(--paper);
+        line-height: 1;
+    }
+
+    .subhead {
+        text-align: center;
+        color: var(--paper-dim);
+        font-size: 15px;
+        max-width: 420px;
+        margin: 14px auto 44px;
+        line-height: 1.5;
+    }
+
+    .ticket {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 4px;
+        padding: 36px 32px 30px;
+    }
+
+    .ticket::before,
+    .ticket::after {
+        content: "";
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        background: var(--ink);
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        box-shadow: 0 0 0 1px var(--panel-line);
+    }
+    .ticket::before { left: -13px; }
+    .ticket::after { right: -13px; }
+
+    .field-label {
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.18em;
+        font-size: 13px;
+        color: var(--gold-dim);
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 140px;
+        resize: vertical;
+        background: var(--ink);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        color: var(--paper);
+        font-family: 'Source Serif 4', Georgia, serif;
+        font-size: 16px;
+        line-height: 1.6;
+        padding: 14px 16px;
+        outline: none;
+        transition: border-color 0.2s ease;
+    }
+
+    textarea::placeholder { color: #5a5f6a; }
+    textarea:focus { border-color: var(--gold-dim); }
+
+    .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px dashed var(--panel-line);
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .hint {
+        font-size: 12px;
+        color: var(--paper-dim);
+        font-style: italic;
+    }
+
+    button {
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.12em;
+        font-size: 16px;
+        background: var(--gold);
+        color: var(--ink);
+        border: none;
+        border-radius: 3px;
+        padding: 12px 26px;
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover { background: #e8b95a; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .result {
+        margin-top: 28px;
+        padding-top: 28px;
+        border-top: 1px solid var(--panel-line);
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+
+    .dial {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: conic-gradient(var(--gold) calc(var(--pct) * 1%), var(--panel-line) 0);
+    }
+
+    .dial::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 50%;
+        background: var(--panel);
+    }
+
+    .dial span {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 26px;
+        color: var(--paper);
+        z-index: 1;
+    }
+
+    .verdict { flex: 1; min-width: 200px; }
+
+    .verdict-label {
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.18em;
+        font-size: 13px;
+        color: var(--gold-dim);
+        margin: 0 0 6px;
+    }
+
+    .verdict-text {
+        margin: 0;
+        font-size: 15px;
+        color: var(--paper-dim);
+        line-height: 1.5;
+    }
+
+    footer {
+        text-align: center;
+        margin-top: 28px;
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        color: #4c515c;
+    }
+</style>
+</head>
+<body>
+<div class="stage">
+    <p class="eyebrow">NOW SCREENING</p>
+    <h1>Rating Fortune</h1>
+    <p class="subhead">
+        Paste a movie or TV show review in English — a model trained with
+        TF-IDF and Ridge Regression will predict what IMDb score it deserves.
+    </p>
+
+    <div class="ticket">
+        <form method="POST">
+            <label class="field-label" for="review_text">REVIEW TEXT</label>
+            <textarea
+                id="review_text"
+                name="review_text"
+                placeholder="E.g. &quot;The plot drags at first, but the second half really pulls you in, and the performances are strong...&quot;"
+            >{{ review_text }}</textarea>
+
+            <div class="row">
+                <span class="hint">A score between 1 and 10 will be calculated</span>
+                <button type="submit">Reveal Score</button>
+            </div>
+        </form>
+
+        {% if prediction is not none %}
+        <div class="result">
+            <div class="dial" style="--pct: {{ (prediction / 10 * 100) | round(0) }}">
+                <span>{{ prediction }}</span>
+            </div>
+            <div class="verdict">
+                <p class="verdict-label">PREDICTED SCORE</p>
+                <p class="verdict-text">
+                    The model rated this review <strong>{{ prediction }} / 10</strong>.
+                    This isn't a precise score — it's a prediction learned from
+                    the review text (R² ≈ 0.56 on test data).
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer>TF-IDF · RIDGE REGRESSION · IMDB REVIEW DATASET</footer>
+</div>
+</body>
+</html>
