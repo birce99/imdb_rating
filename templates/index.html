@@ -200,6 +200,53 @@
         line-height: 1.5;
     }
 
+    /* --- Öneri bölümü için ek stiller --- */
+    .search-input {
+        width: 100%;
+        background: var(--ink);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        color: var(--paper);
+        font-family: 'Source Serif 4', Georgia, serif;
+        font-size: 16px;
+        padding: 12px 14px;
+        outline: none;
+        transition: border-color 0.2s ease;
+    }
+    .search-input:focus { border-color: var(--gold-dim); }
+
+    .suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-top: none;
+        border-radius: 0 0 3px 3px;
+        z-index: 5;
+        display: none;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .suggestion-item {
+        padding: 10px 14px;
+        cursor: pointer;
+        color: var(--paper-dim);
+        font-size: 15px;
+    }
+    .suggestion-item:hover { background: var(--ink); }
+
+    .rec-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px dashed var(--panel-line);
+        font-size: 15px;
+    }
+    .rec-score { color: var(--gold); }
+
     footer {
         text-align: center;
         margin-top: 28px;
@@ -243,14 +290,102 @@
                 <p class="verdict-text">
                     The model rated this review <strong>{{ prediction }} / 10</strong>.
                     This isn't a precise score — it's a prediction learned from
-                    the review text (R² ≈ 0.56 on test data).
+                    the review text (R² ≈ 0.62 on test data).
                 </p>
             </div>
         </div>
         {% endif %}
     </div>
 
+    <div class="ticket" style="margin-top: 24px;">
+        <label class="field-label" for="movie_search">FIND SIMILAR FILMS</label>
+        <div style="position: relative;">
+            <input
+                type="text"
+                id="movie_search"
+                class="search-input"
+                placeholder="Start typing a movie title..."
+                autocomplete="off"
+            >
+            <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <div id="recommend_results" style="margin-top: 20px;"></div>
+    </div>
+
     <footer>TF-IDF · RIDGE REGRESSION · IMDB REVIEW DATASET</footer>
 </div>
+
+<script>
+    const searchInput = document.getElementById('movie_search');
+    const suggestionsBox = document.getElementById('suggestions');
+    const resultsBox = document.getElementById('recommend_results');
+    let debounceTimer = null;
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const query = searchInput.value.trim();
+
+        if (query.length < 2) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => renderSuggestions(data.results));
+        }, 300);
+    });
+
+    function renderSuggestions(titles) {
+        if (titles.length === 0) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        suggestionsBox.innerHTML = titles.map(title => `
+            <div class="suggestion-item">${title}</div>
+        `).join('');
+
+        suggestionsBox.querySelectorAll('.suggestion-item').forEach((el, i) => {
+            el.addEventListener('click', () => {
+                searchInput.value = titles[i];
+                suggestionsBox.style.display = 'none';
+                fetchRecommendations(titles[i]);
+            });
+        });
+
+        suggestionsBox.style.display = 'block';
+    }
+
+    function fetchRecommendations(title) {
+        resultsBox.innerHTML = '<p class="hint">Loading...</p>';
+
+        fetch(`/recommend?title=${encodeURIComponent(title)}`)
+            .then(res => res.json())
+            .then(data => renderRecommendations(data.results));
+    }
+
+    function renderRecommendations(movies) {
+        if (movies.length === 0) {
+            resultsBox.innerHTML = '<p class="hint">No recommendations found.</p>';
+            return;
+        }
+
+        resultsBox.innerHTML = movies.map(m => `
+            <div class="rec-row">
+                <span>${m.movie}</span>
+                <span class="rec-score">${m.avg_rating.toFixed(1)} / 10</span>
+            </div>
+        `).join('');
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#movie_search') && !e.target.closest('#suggestions')) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>
